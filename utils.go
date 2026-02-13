@@ -1,5 +1,9 @@
 package main
 
+import (
+	"strings"
+)
+
 var knownAgentCommitters = map[string]string{
 	"209825114+claude[bot]@users.noreply.github.com":					"Claude",
 	"215619710+anthropic-claude[bot]@users.noreply.github.com":			"Claude (Anthropic)",
