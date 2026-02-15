@@ -8,7 +8,7 @@ var knownAgentCommitters = map[string]string{
 	"209825114+claude[bot]@users.noreply.github.com":					"Claude",
 	"215619710+anthropic-claude[bot]@users.noreply.github.com":			"Claude (Anthropic)",
 	"208546643+claude-code-action[bot]@users.noreply.github.com": 		"Claude Code Action",
-	"198982749+Copilot@users.noreply.github.com": 						"GitHub Copilot (agent)",
+	"198982749+copilot@users.noreply.github.com": 						"GitHub Copilot (agent)",
 	"167198135+copilot[bot]@users.noreply.github.com": 					"GitHub Copilot (chat)",
 	"206951365+cursor[bot]@users.noreply.github.com": 					"Cursor",
 	"215057067+openai-codex[bot]@users.noreply.github.com": 			"OpenAI Codex",
