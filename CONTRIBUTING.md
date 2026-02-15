@@ -1,6 +1,6 @@
 # How to Contribute
 
-This projcet is still in its early stages.
+This project is still in its early stages.
 
 The best way to get involved is to join the [CHAOSS Slack](https://chaoss.community/kb-getting-started/) in the #data-ai-detection-action channel to be part of the conversation.
 
