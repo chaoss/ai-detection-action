@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"os"
+
+	"github.com/chaoss/ai-detection-action/cmd"
+)
 
 func main() {
-    fmt.Println("Hello, World!")
+	os.Exit(cmd.Run(os.Args[1:], os.Stdout, os.Stderr))
 }

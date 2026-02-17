@@ -1,0 +1,99 @@
+name: 'AI Detection'
+description: 'Detect AI-generated contributions in pull requests'
+
+inputs:
+  label:
+    description: 'Label to apply when AI is detected'
+    required: false
+    default: 'ai-detected'
+  min-confidence:
+    description: 'Minimum confidence level (low, medium, high)'
+    required: false
+    default: 'low'
+  scan-pr-body:
+    description: 'Whether to scan the PR body for AI tool mentions'
+    required: false
+    default: 'true'
+
+outputs:
+  ai-detected:
+    description: 'Whether AI involvement was detected (true/false)'
+    value: ${{ steps.scan.outputs.ai-detected }}
+  report:
+    description: 'JSON report of findings'
+    value: ${{ steps.scan.outputs.report }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: Build ai-detection
+      shell: bash
+      run: |
+        go build -o ${{ runner.temp }}/ai-detection ${{ github.action_path }}/..
+
+    - name: Scan commits and PR body
+      id: scan
+      shell: bash
+      env:
+        MIN_CONFIDENCE: ${{ inputs.min-confidence }}
+        SCAN_PR_BODY: ${{ inputs.scan-pr-body }}
+        PR_BODY: ${{ github.event.pull_request.body }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        AI_DETECTED=false
+
+        # Scan commits
+        COMMIT_REPORT=$(${{ runner.temp }}/ai-detection commits \
+          --range="${BASE_SHA}..${HEAD_SHA}" \
+          --format=json \
+          --min-confidence="${MIN_CONFIDENCE}" \
+          .) || COMMIT_EXIT=$?
+
+        if [ "${COMMIT_EXIT:-0}" = "1" ]; then
+          AI_DETECTED=true
+        elif [ "${COMMIT_EXIT:-0}" = "2" ]; then
+          echo "::warning::ai-detection commit scan failed"
+        fi
+
+        # Scan PR body if enabled
+        TEXT_REPORT="{}"
+        if [ "${SCAN_PR_BODY}" = "true" ] && [ -n "${PR_BODY}" ]; then
+          TEXT_REPORT=$(echo "${PR_BODY}" | ${{ runner.temp }}/ai-detection text --format=json) || TEXT_EXIT=$?
+          if [ "${TEXT_EXIT:-0}" = "1" ]; then
+            AI_DETECTED=true
+          fi
+        fi
+
+        echo "ai-detected=${AI_DETECTED}" >> "$GITHUB_OUTPUT"
+
+        # Combine reports into single output
+        COMBINED=$(jq -n \
+          --argjson commits "${COMMIT_REPORT}" \
+          --argjson text "${TEXT_REPORT}" \
+          '{commits: $commits, text: $text}')
+
+        # Use a delimiter for multiline output
+        EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+        echo "report<<${EOF}" >> "$GITHUB_OUTPUT"
+        echo "${COMBINED}" >> "$GITHUB_OUTPUT"
+        echo "${EOF}" >> "$GITHUB_OUTPUT"
+
+    - name: Apply label
+      if: steps.scan.outputs.ai-detected == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        LABEL: ${{ inputs.label }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        # Create the label if it doesn't exist
+        gh label create "${LABEL}" --color "1d76db" --description "AI involvement detected" 2>/dev/null || true
+
+        # Apply the label to the PR
+        gh pr edit "${PR_NUMBER}" --add-label "${LABEL}"
