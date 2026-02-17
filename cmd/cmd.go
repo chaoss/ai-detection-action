@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -13,15 +12,16 @@ import (
 	"github.com/chaoss/ai-detection-action/detection/toolmention"
 	"github.com/chaoss/ai-detection-action/output"
 	"github.com/chaoss/ai-detection-action/scan"
+	"github.com/spf13/cobra"
 )
 
 var Version = "dev"
 
 // Exit codes
 const (
-	ExitNoAI    = 0
-	ExitAI      = 1
-	ExitError   = 2
+	ExitNoAI  = 0
+	ExitAI    = 1
+	ExitError = 2
 )
 
 func allDetectors() []detection.Detector {
@@ -35,128 +35,163 @@ func allDetectors() []detection.Detector {
 
 // Run is the main entry point for the CLI. Returns an exit code.
 func Run(args []string, stdout, stderr io.Writer) int {
-	if len(args) < 1 {
-		fmt.Fprintln(stderr, "usage: ai-detection <command> [options]")
-		fmt.Fprintln(stderr, "commands: commits, text, version")
-		return ExitError
+	rootCmd := &cobra.Command{
+		Use:           "ai-detection",
+		Short:         "Detect AI-generated contributions",
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
+	rootCmd.SetOut(stdout)
+	rootCmd.SetErr(stderr)
 
-	switch args[0] {
-	case "commits":
-		return runCommits(args[1:], stdout, stderr)
-	case "text":
-		return runText(args[1:], stdout, stderr)
-	case "version":
-		fmt.Fprintf(stdout, "ai-detection %s\n", Version)
-		return ExitNoAI
-	default:
-		fmt.Fprintf(stderr, "unknown command: %s\n", args[0])
-		fmt.Fprintln(stderr, "commands: commits, text, version")
-		return ExitError
-	}
-}
+	exitCode := ExitNoAI
 
-func runCommits(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("commits", flag.ContinueOnError)
-	fs.SetOutput(stderr)
+	rootCmd.AddCommand(scanCommand(stdout, stderr, &exitCode))
+	rootCmd.AddCommand(textCommand(stdout, stderr, &exitCode))
+	rootCmd.AddCommand(versionCommand(stdout, &exitCode))
 
-	rangeFlag := fs.String("range", "", "commit range in BASE..HEAD format")
-	formatFlag := fs.String("format", "text", "output format: json or text")
-	minConfFlag := fs.String("min-confidence", "low", "minimum confidence level: low, medium, high (or 1, 2, 3)")
-
-	if err := fs.Parse(args); err != nil {
-		return ExitError
-	}
-
-	repoPath := "."
-	if fs.NArg() > 0 {
-		repoPath = fs.Arg(0)
-	}
-
-	minConf, err := output.ConfidenceFromString(*minConfFlag)
-	if err != nil {
-		fmt.Fprintln(stderr, err)
-		return ExitError
-	}
-
-	detectors := allDetectors()
-	report, err := scan.ScanCommitRange(repoPath, *rangeFlag, detectors)
-	if err != nil {
+	rootCmd.SetArgs(args)
+	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		return ExitError
 	}
 
-	report = filterReport(report, minConf)
-
-	switch *formatFlag {
-	case "json":
-		if err := output.FormatJSON(stdout, report); err != nil {
-			fmt.Fprintf(stderr, "error: %v\n", err)
-			return ExitError
-		}
-	case "text":
-		if err := output.FormatText(stdout, report); err != nil {
-			fmt.Fprintf(stderr, "error: %v\n", err)
-			return ExitError
-		}
-	default:
-		fmt.Fprintf(stderr, "unknown format: %s\n", *formatFlag)
-		return ExitError
-	}
-
-	if report.Summary.AICommits > 0 {
-		return ExitAI
-	}
-	return ExitNoAI
+	return exitCode
 }
 
-func runText(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("text", flag.ContinueOnError)
-	fs.SetOutput(stderr)
+func scanCommand(stdout, stderr io.Writer, exitCode *int) *cobra.Command {
+	var rangeFlag string
+	var formatFlag string
+	var minConfFlag string
 
-	formatFlag := fs.String("format", "text", "output format: json or text")
-	inputFlag := fs.String("input", "-", "input file path, or - for stdin")
+	cmd := &cobra.Command{
+		Use:   "scan [repo-path]",
+		Short: "Scan commits for AI signals",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			repoPath := "."
+			if len(args) > 0 {
+				repoPath = args[0]
+			}
 
-	if err := fs.Parse(args); err != nil {
-		return ExitError
+			minConf, err := output.ConfidenceFromString(minConfFlag)
+			if err != nil {
+				fmt.Fprintln(stderr, err)
+				*exitCode = ExitError
+				return err
+			}
+
+			detectors := allDetectors()
+			report, err := scan.ScanCommitRange(repoPath, rangeFlag, detectors)
+			if err != nil {
+				fmt.Fprintf(stderr, "error: %v\n", err)
+				*exitCode = ExitError
+				return err
+			}
+
+			report = filterReport(report, minConf)
+
+			switch formatFlag {
+			case "json":
+				if err := output.FormatJSON(stdout, report); err != nil {
+					fmt.Fprintf(stderr, "error: %v\n", err)
+					*exitCode = ExitError
+					return err
+				}
+			case "text":
+				if err := output.FormatText(stdout, report); err != nil {
+					fmt.Fprintf(stderr, "error: %v\n", err)
+					*exitCode = ExitError
+					return err
+				}
+			default:
+				err := fmt.Errorf("unknown format: %s", formatFlag)
+				fmt.Fprintln(stderr, err)
+				*exitCode = ExitError
+				return err
+			}
+
+			if report.Summary.AICommits > 0 {
+				*exitCode = ExitAI
+			}
+			return nil
+		},
 	}
 
-	var textBytes []byte
-	var err error
+	cmd.Flags().StringVar(&rangeFlag, "range", "", "commit range in BASE..HEAD format")
+	cmd.Flags().StringVar(&formatFlag, "format", "text", "output format: json or text")
+	cmd.Flags().StringVar(&minConfFlag, "min-confidence", "low", "minimum confidence level: low, medium, high (or 1, 2, 3)")
 
-	if *inputFlag == "-" {
-		textBytes, err = io.ReadAll(os.Stdin)
-	} else {
-		textBytes, err = os.ReadFile(*inputFlag)
-	}
-	if err != nil {
-		fmt.Fprintf(stderr, "error reading input: %v\n", err)
-		return ExitError
+	return cmd
+}
+
+func textCommand(stdout, stderr io.Writer, exitCode *int) *cobra.Command {
+	var formatFlag string
+	var inputFlag string
+
+	cmd := &cobra.Command{
+		Use:   "text",
+		Short: "Scan text input for AI signals",
+		RunE: func(_ *cobra.Command, args []string) error {
+			var textBytes []byte
+			var err error
+
+			if inputFlag == "-" {
+				textBytes, err = io.ReadAll(os.Stdin)
+			} else {
+				textBytes, err = os.ReadFile(inputFlag)
+			}
+			if err != nil {
+				fmt.Fprintf(stderr, "error reading input: %v\n", err)
+				*exitCode = ExitError
+				return err
+			}
+
+			detectors := allDetectors()
+			findings := scan.ScanText(string(textBytes), detectors)
+
+			switch formatFlag {
+			case "json":
+				if err := output.FormatJSONFindings(stdout, findings); err != nil {
+					fmt.Fprintf(stderr, "error: %v\n", err)
+					*exitCode = ExitError
+					return err
+				}
+			case "text":
+				if err := output.FormatTextFindings(stdout, findings); err != nil {
+					fmt.Fprintf(stderr, "error: %v\n", err)
+					*exitCode = ExitError
+					return err
+				}
+			default:
+				err := fmt.Errorf("unknown format: %s", formatFlag)
+				fmt.Fprintln(stderr, err)
+				*exitCode = ExitError
+				return err
+			}
+
+			if len(findings) > 0 {
+				*exitCode = ExitAI
+			}
+			return nil
+		},
 	}
 
-	detectors := allDetectors()
-	findings := scan.ScanText(string(textBytes), detectors)
+	cmd.Flags().StringVar(&formatFlag, "format", "text", "output format: json or text")
+	cmd.Flags().StringVar(&inputFlag, "input", "-", "input file path, or - for stdin")
 
-	switch *formatFlag {
-	case "json":
-		if err := output.FormatJSONFindings(stdout, findings); err != nil {
-			fmt.Fprintf(stderr, "error: %v\n", err)
-			return ExitError
-		}
-	case "text":
-		if err := output.FormatTextFindings(stdout, findings); err != nil {
-			fmt.Fprintf(stderr, "error: %v\n", err)
-			return ExitError
-		}
-	default:
-		fmt.Fprintf(stderr, "unknown format: %s\n", *formatFlag)
-		return ExitError
-	}
+	return cmd
+}
 
-	if len(findings) > 0 {
-		return ExitAI
+func versionCommand(stdout io.Writer, exitCode *int) *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Print version",
+		Run: func(_ *cobra.Command, _ []string) {
+			fmt.Fprintf(stdout, "ai-detection %s\n", Version)
+			*exitCode = ExitNoAI
+		},
 	}
-	return ExitNoAI
 }
 
 func filterReport(report scan.Report, minConf detection.Confidence) scan.Report {

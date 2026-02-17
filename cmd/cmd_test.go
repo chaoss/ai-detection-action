@@ -69,11 +69,11 @@ func initTestRepo(t *testing.T) string {
 func TestRunNoArgs(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	code := Run(nil, &stdout, &stderr)
-	if code != ExitError {
-		t.Errorf("exit code = %d, want %d", code, ExitError)
+	if code != ExitNoAI {
+		t.Errorf("exit code = %d, want %d", code, ExitNoAI)
 	}
-	if !strings.Contains(stderr.String(), "usage") {
-		t.Errorf("expected usage message, got: %s", stderr.String())
+	if !strings.Contains(stdout.String(), "ai-detection") {
+		t.Errorf("expected help output, got: %s", stdout.String())
 	}
 }
 
@@ -96,11 +96,11 @@ func TestRunVersion(t *testing.T) {
 	}
 }
 
-func TestRunCommitsText(t *testing.T) {
+func TestRunScanText(t *testing.T) {
 	dir := initTestRepo(t)
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"commits", "--format=text", dir}, &stdout, &stderr)
+	code := Run([]string{"scan", "--format=text", dir}, &stdout, &stderr)
 
 	if code != ExitAI {
 		t.Errorf("exit code = %d, want %d (stderr: %s)", code, ExitAI, stderr.String())
@@ -110,11 +110,11 @@ func TestRunCommitsText(t *testing.T) {
 	}
 }
 
-func TestRunCommitsJSON(t *testing.T) {
+func TestRunScanJSON(t *testing.T) {
 	dir := initTestRepo(t)
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"commits", "--format=json", dir}, &stdout, &stderr)
+	code := Run([]string{"scan", "--format=json", dir}, &stdout, &stderr)
 
 	if code != ExitAI {
 		t.Errorf("exit code = %d, want %d (stderr: %s)", code, ExitAI, stderr.String())
@@ -129,11 +129,11 @@ func TestRunCommitsJSON(t *testing.T) {
 	}
 }
 
-func TestRunCommitsMinConfidence(t *testing.T) {
+func TestRunScanMinConfidence(t *testing.T) {
 	dir := initTestRepo(t)
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"commits", "--format=json", "--min-confidence=high", dir}, &stdout, &stderr)
+	code := Run([]string{"scan", "--format=json", "--min-confidence=high", dir}, &stdout, &stderr)
 
 	var report scan.Report
 	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil {
@@ -152,7 +152,7 @@ func TestRunCommitsMinConfidence(t *testing.T) {
 	_ = code // exit code depends on whether high-confidence findings exist
 }
 
-func TestRunCommitsNoAI(t *testing.T) {
+func TestRunScanNoAI(t *testing.T) {
 	dir := t.TempDir()
 	repo, err := git.PlainInit(dir, false)
 	if err != nil {
@@ -183,15 +183,15 @@ func TestRunCommitsNoAI(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"commits", dir}, &stdout, &stderr)
+	code := Run([]string{"scan", dir}, &stdout, &stderr)
 	if code != ExitNoAI {
 		t.Errorf("exit code = %d, want %d (stderr: %s, stdout: %s)", code, ExitNoAI, stderr.String(), stdout.String())
 	}
 }
 
-func TestRunCommitsInvalidRepo(t *testing.T) {
+func TestRunScanInvalidRepo(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"commits", t.TempDir()}, &stdout, &stderr)
+	code := Run([]string{"scan", t.TempDir()}, &stdout, &stderr)
 	if code != ExitError {
 		t.Errorf("exit code = %d, want %d", code, ExitError)
 	}

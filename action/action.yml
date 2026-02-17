@@ -49,7 +49,7 @@ runs:
         AI_DETECTED=false
 
         # Scan commits
-        COMMIT_REPORT=$(${{ runner.temp }}/ai-detection commits \
+        COMMIT_REPORT=$(${{ runner.temp }}/ai-detection scan \
           --range="${BASE_SHA}..${HEAD_SHA}" \
           --format=json \
           --min-confidence="${MIN_CONFIDENCE}" \
