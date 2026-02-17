@@ -70,7 +70,7 @@ func (d *Detector) Detect(input detection.Input) []detection.Finding {
 					Detector:   d.Name(),
 					Tool:       name,
 					Confidence: detection.ConfidenceHigh,
-					Detail:     fmt.Sprintf("committer email numeric prefix %s matches known AI bot (username may have changed)", prefix),
+					Detail:     fmt.Sprintf("committer email %s matches known AI bot", email),
 				}}
 			}
 		}
