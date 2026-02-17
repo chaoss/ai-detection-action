@@ -22,7 +22,7 @@ Four detectors run against each commit, each producing findings at a confidence 
 ## CLI usage
 
 ```
-ai-detection commits [--range=BASE..HEAD] [--format=json|text] [--min-confidence=low|medium|high] [repo-path]
+ai-detection scan [--range=BASE..HEAD] [--format=json|text] [--min-confidence=low|medium|high] [repo-path]
 ai-detection text [--format=json|text] [--input=FILE|-]
 ai-detection version
 ```
@@ -33,13 +33,13 @@ Exit codes: `0` = no AI detected, `1` = AI detected, `2` = error.
 
 ```sh
 # Scan all commits in the current repo
-ai-detection commits
+ai-detection scan
 
 # Scan a specific range, JSON output
-ai-detection commits --range=abc123..def456 --format=json
+ai-detection scan --range=abc123..def456 --format=json
 
 # Only report high-confidence findings
-ai-detection commits --min-confidence=high /path/to/repo
+ai-detection scan --min-confidence=high /path/to/repo
 ```
 
 ### Scan text
@@ -57,7 +57,7 @@ ai-detection text --input=pr-body.txt
 The exit code makes it usable in shell pipelines and CI scripts:
 
 ```sh
-if ai-detection commits --range=$BASE..$HEAD --min-confidence=medium; then
+if ai-detection scan --range=$BASE..$HEAD --min-confidence=medium; then
   echo "No AI detected"
 else
   echo "AI involvement detected"
