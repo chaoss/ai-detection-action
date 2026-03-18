@@ -1,0 +1,35 @@
+scan/scan.go
+  7efc9ced6547e576 69
+detection/gitnotes/gitnotes_test.go
+  7efc9ced6547e576 1-196
+gitops/gitops.go
+  7efc9ced6547e576 5,19,22-23,29-30,46,120,130-192,220
+detection/detection.go
+  7efc9ced6547e576 39
+scan/scan_test.go
+  7efc9ced6547e576 5,13,24,182-265
+detection/gitnotes/gitnotes.go
+  7efc9ced6547e576 1-91
+cmd/cmd.go
+  7efc9ced6547e576 11,32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "3660eb44b1d12d7acb3f160f428f23c9a1f3a919",
+  "prompts": {
+    "7efc9ced6547e576": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "55103ecc-2365-4098-b62b-44e95c57ef90",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 456,
+      "total_deletions": 11,
+      "accepted_lines": 450,
+      "overriden_lines": 0
+    }
+  }
+}
