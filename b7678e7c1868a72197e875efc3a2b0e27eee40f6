@@ -1,0 +1,23 @@
+scan/scan_test.go
+  7efc9ced6547e576 240-248
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "b7678e7c1868a72197e875efc3a2b0e27eee40f6",
+  "prompts": {
+    "7efc9ced6547e576": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "55103ecc-2365-4098-b62b-44e95c57ef90",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt <andrewnez@gmail.com>",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 0,
+      "accepted_lines": 9,
+      "overriden_lines": 0
+    }
+  }
+}
