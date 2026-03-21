@@ -23,6 +23,27 @@ var commitMessagePatterns = []struct {
 		},
 		name: "Claude Code",
 	},
+	{
+		check: func(msg string) bool {
+			trailers := []string{
+				"Entire-Metadata",
+				"Entire-Metadata-Task",
+				"Entire-Strategy",
+				"Entire-Session",
+				"Entire-Condensation",
+				"Entire-Source-Ref",
+				"Entire-Checkpoint",
+				"Entire-Agent",
+			}
+			for _, trailer := range trailers {
+				if strings.Contains(msg, fmt.Sprintf("\n%s:", trailer)) {
+					return true
+				}
+			}
+			return false
+		},
+		name: "EntireIO",
+	},
 }
 
 type Detector struct{}
