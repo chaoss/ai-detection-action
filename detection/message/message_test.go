@@ -34,6 +34,26 @@ func TestDetect(t *testing.T) {
 			wantTools: []string{"Claude Code"},
 		},
 		{
+			name:      "EntireIO trailer present in commit",
+			message:   "this is some commit message\n\nEntire-Checkpoint: ab123cdefg12",
+			wantTools: []string{"EntireIO"},
+		},
+		{
+			name:      "Another EntireIO trailer present in commit",
+			message:   "this is some commit message\n\nEntire-Metadata: ab123cdefg12",
+			wantTools: []string{"EntireIO"},
+		},
+		{
+			name:      "Another EntireIO trailer present in commit with CRLF line endings",
+			message:   "this is some commit message\r\n\r\nEntire-Metadata: ab123cdefg12",
+			wantTools: []string{"EntireIO"},
+		},
+		{
+			name:      "EntireIO trailer not used, only mentioned in a commit",
+			message:   "this is a commit message with\nEntire-Metadata mentioned",
+			wantTools: nil,
+		},
+		{
 			name:      "no patterns",
 			message:   "normal commit message with no AI signatures",
 			wantTools: nil,
