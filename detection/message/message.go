@@ -47,24 +47,31 @@ var commitMessagePatterns = []struct {
 	},
 	{
 		check: func(msg string) (detection.Confidence, bool) {
-			confidence := detection.ConfidenceMedium
 			trailerRegex := regexp.MustCompile(`(?m)^Replit-Commit-Author:\s*(Agent|Assistant)(?:\r?\nReplit-Commit-Session-Id:\s*([a-fA-F0-9-]+))?(?:\r?\n|$)`)
 
 			matchResult := trailerRegex.FindStringSubmatch(msg)
-			if len(matchResult) > 0 {
-				switch matchResult[1] {
-				case "Agent":
-					confidence = detection.ConfidenceMedium
-				case "Assistant":
-					confidence = detection.ConfidenceLow
-				}
-				// if commit session id also present, increase confidence
-				if matchResult[2] != "" {
-					confidence.Increment()
-				}
-				return confidence, true
+			if len(matchResult) == 0 {
+				// replit not detected
+				return detection.ConfidenceMedium, false
 			}
-			return confidence, false
+
+			var confidence detection.Confidence
+			switch matchResult[1] {
+			case "Agent":
+				confidence = detection.ConfidenceMedium
+			case "Assistant":
+				confidence = detection.ConfidenceLow
+			default:
+				// unknown replit product, we cannot confirm ai use
+				return detection.ConfidenceLow, false
+			}
+
+			// if commit session id also present, increase confidence
+			if matchResult[2] != "" {
+				confidence.Increment()
+			}
+
+			return confidence, true
 		},
 		name: "Replit",
 	},

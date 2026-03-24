@@ -111,6 +111,12 @@ func TestDetect(t *testing.T) {
 			wantConfidence: []detection.Confidence{detection.ConfidenceLow},
 		},
 		{
+			name:           "Some other Replit product trailer (not agent or asst) present in a commit",
+			message:        "this is a commit message with\nReplit-Commit-Author: SomeOtherReplitProduct",
+			wantTools:      nil,
+			wantConfidence: nil,
+		},
+		{
 			name:           "Replit trailer not used, only mentioned in a commit",
 			message:        "this is a commit message with\nReplit-Commit-Author: Assistant mentioned",
 			wantTools:      nil,
